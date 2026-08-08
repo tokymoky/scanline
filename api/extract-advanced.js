@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     return res.status(413).json({ error: 'Image trop volumineuse' });
   }
 
-  const MODEL = 'gemini-2.5-flash'; // check aistudio.google.com if this errors
+  const MODEL = 'gemini-2.5-flash'; // check aistudio.google.com if this errorsn
 
   try {
     const geminiRes = await fetch(
