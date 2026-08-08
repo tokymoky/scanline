@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanline — Image to Text</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --paper:#FAFAF7;
+    --ink:#1B1E23;
+    --muted:#8A8F98;
+    --accent:#2F6FED;
+    --accent-soft:#EAF0FF;
+    --line:#E4E2DA;
+    --success:#2FA84F;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:56px 24px 80px;
+  }
+
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:10px;
+  }
+
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:38px;
+    line-height:1.1;
+    margin:0 0 12px;
+    letter-spacing:-0.01em;
+  }
+
+  .sub{
+    color:var(--muted);
+    font-size:15px;
+    margin:0 0 40px;
+    max-width:46ch;
+  }
+
+  .dropzone{
+    position:relative;
+    border:1.5px dashed var(--line);
+    border-radius:14px;
+    padding:36px 24px;
+    text-align:center;
+    cursor:pointer;
+    background:#fff;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .dropzone input{
+    position:absolute; inset:0; opacity:0; cursor:pointer;
+  }
+  .dz-label{
+    font-size:14px;
+    color:var(--muted);
+  }
+  .dz-label strong{ color:var(--ink); }
+
+  .preview-area{
+    margin-top:24px;
+    display:none;
+  }
+  .preview-area.active{ display:block; }
+
+  .scan-frame{
+    position:relative;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid var(--line);
+    background:#fff;
+  }
+  .scan-frame img{
+    display:block;
+    width:100%;
+    max-height:340px;
+    object-fit:contain;
+    background:#fff;
+  }
+  .scan-line{
+    position:absolute;
+    left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    top:0;
+    display:none;
+    box-shadow:0 0 12px 1px var(--accent);
+  }
+  .scan-frame.scanning .scan-line{
+    display:block;
+    animation:sweep 1.6s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%{ top:0; }
+    50%{ top:calc(100% - 2px); }
+    100%{ top:0; }
+  }
+
+  .actions{
+    display:flex;
+    gap:12px;
+    margin-top:18px;
+    align-items:center;
+  }
+
+  button.primary{
+    font-family:'Inter',sans-serif;
+    font-weight:500;
+    font-size:14px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    padding:11px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:opacity .15s ease;
+  }
+  button.primary:hover{ opacity:0.85; }
+  button.primary:disabled{
+    background:var(--muted);
+    cursor:not-allowed;
+    opacity:0.6;
+  }
+
+  button.ghost{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--muted);
+    padding:10px 16px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  button.ghost:hover{ border-color:var(--ink); color:var(--ink); }
+
+  .status{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--accent);
+  }
+  .status.done{ color:var(--success); }
+  .status.error{ color:#C0392B; }
+
+  .result-block{
+    margin-top:32px;
+    display:none;
+  }
+  .result-block.active{ display:block; }
+
+  .result-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .result-head span{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  textarea{
+    width:100%;
+    min-height:220px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    line-height:1.6;
+    color:var(--ink);
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px;
+    resize:vertical;
+    white-space:pre-wrap;
+  }
+  textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+
+  .copy-btn{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    background:none;
+    border:none;
+    color:var(--accent);
+    cursor:pointer;
+    text-decoration:underline;
+  }
+
+  footer{
+    margin-top:56px;
+    font-size:12px;
+    color:var(--muted);
+    border-top:1px solid var(--line);
+    padding-top:16px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .scan-line{ animation:none !important; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">01 — Prototype</div>
+  <h1>Dépose une image,<br>récupère le texte.</h1>
+  <p class="sub">Aucune inscription, aucun serveur. L'image ne quitte jamais ton navigateur — l'extraction tourne entièrement en local.</p>
+
+  <label class="dropzone" id="dropzone">
+    <input type="file" id="fileInput" accept="image/*">
+    <div class="dz-label"><strong>Clique ou dépose une image ici</strong><br>PNG, JPG, WEBP</div>
+  </label>
+
+  <div class="preview-area" id="previewArea">
+    <div class="scan-frame" id="scanFrame">
+      <div class="scan-line"></div>
+      <img id="previewImg" alt="Aperçu de l'image">
+    </div>
+    <div class="actions">
+      <button class="primary" id="extractBtn">Extraire le texte</button>
+      <button class="ghost" id="resetBtn">Changer d'image</button>
+      <span class="status" id="statusText"></span>
+    </div>
+  </div>
+
+  <div class="result-block" id="resultBlock">
+    <div class="result-head">
+      <span>Texte extrait</span>
+      <button class="copy-btn" id="copyBtn">Copier</button>
+    </div>
+    <textarea id="resultText" readonly></textarea>
+  </div>
+
+  <footer>Étape 1–2 · prototype fonctionnel, sans design final</footer>
+</div>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewArea = document.getElementById('previewArea');
+const previewImg = document.getElementById('previewImg');
+const scanFrame = document.getElementById('scanFrame');
+const extractBtn = document.getElementById('extractBtn');
+const resetBtn = document.getElementById('resetBtn');
+const statusText = document.getElementById('statusText');
+const resultBlock = document.getElementById('resultBlock');
+const resultText = document.getElementById('resultText');
+const copyBtn = document.getElementById('copyBtn');
+
+let currentBase64 = null;
+let currentMediaType = null;
+
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+['dragover','dragenter'].forEach(evt => {
+  dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(evt => {
+  dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); });
+});
+dropzone.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file){
+  currentMediaType = file.type || 'image/png';
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    currentBase64 = dataUrl.split(',')[1];
+    previewImg.src = dataUrl;
+    previewArea.classList.add('active');
+    resultBlock.classList.remove('active');
+    statusText.textContent = '';
+    statusText.className = 'status';
+  };
+  reader.readAsDataURL(file);
+}
+
+resetBtn.addEventListener('click', () => {
+  currentBase64 = null;
+  fileInput.value = '';
+  previewArea.classList.remove('active');
+  resultBlock.classList.remove('active');
+  statusText.textContent = '';
+});
+
+extractBtn.addEventListener('click', async () => {
+  if (!currentBase64) return;
+  extractBtn.disabled = true;
+  scanFrame.classList.add('scanning');
+  statusText.textContent = 'Lecture en cours…';
+  statusText.className = 'status';
+
+  try{
+    // Real OCR running directly in the browser via Tesseract.js (WebAssembly).
+    // No API, no server, no key — the extraction script itself executes here.
+    const { data } = await Tesseract.recognize(previewImg.src, 'fra+eng', {
+      logger: (m) => {
+        if (m.status && typeof m.progress === 'number'){
+          const pct = Math.round(m.progress * 100);
+          statusText.textContent = m.status + '… ' + pct + '%';
+        }
+      }
+    });
+
+    const extracted = (data.text || '').trim() || 'Aucun texte détecté.';
+
+    resultText.value = extracted;
+    resultBlock.classList.add('active');
+    statusText.textContent = 'Terminé';
+    statusText.className = 'status done';
+  }catch(err){
+    statusText.textContent = 'Erreur : ' + err.message;
+    statusText.className = 'status error';
+  }finally{
+    extractBtn.disabled = false;
+    scanFrame.classList.remove('scanning');
+  }
+});
+
+copyBtn.addEventListener('click', () => {
+  resultText.select();
+  document.execCommand('copy');
+  copyBtn.textContent = 'Copié ✓';
+  setTimeout(() => copyBtn.textContent = 'Copier', 1500);
+});
+</script>
+</body>
+</html>
