@@ -241,6 +241,7 @@
     </div>
     <div class="actions">
       <button class="primary" id="extractBtn">Extraire le texte</button>
+      <button class="ghost" id="advancedBtn">Extraction avancée (manuscrit / mise en page complexe)</button>
       <button class="ghost" id="resetBtn">Changer d'image</button>
       <span class="status" id="statusText"></span>
     </div>
@@ -264,6 +265,7 @@ const previewArea = document.getElementById('previewArea');
 const previewImg = document.getElementById('previewImg');
 const scanFrame = document.getElementById('scanFrame');
 const extractBtn = document.getElementById('extractBtn');
+const advancedBtn = document.getElementById('advancedBtn');
 const resetBtn = document.getElementById('resetBtn');
 const statusText = document.getElementById('statusText');
 const resultBlock = document.getElementById('resultBlock');
@@ -340,6 +342,46 @@ extractBtn.addEventListener('click', async () => {
     statusText.textContent = 'Erreur : ' + err.message;
     statusText.className = 'status error';
   }finally{
+    extractBtn.disabled = false;
+    scanFrame.classList.remove('scanning');
+  }
+});
+
+advancedBtn.addEventListener('click', async () => {
+  if (!currentBase64) return;
+  advancedBtn.disabled = true;
+  extractBtn.disabled = true;
+  scanFrame.classList.add('scanning');
+  statusText.textContent = 'Extraction avancée en cours…';
+  statusText.className = 'status';
+
+  try{
+    const response = await fetch("/api/extract-advanced", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mediaType: currentMediaType,
+        imageBase64: currentBase64
+      })
+    });
+
+    if (!response.ok){
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.error || ('Requête échouée (' + response.status + ')'));
+    }
+
+    const data = await response.json();
+    const extracted = (data.text || '').trim() || 'Aucun texte détecté.';
+
+    resultText.value = extracted;
+    resultBlock.classList.add('active');
+    statusText.textContent = 'Terminé (extraction avancée)';
+    statusText.className = 'status done';
+  }catch(err){
+    statusText.textContent = 'Erreur : ' + err.message;
+    statusText.className = 'status error';
+  }finally{
+    advancedBtn.disabled = false;
     extractBtn.disabled = false;
     scanFrame.classList.remove('scanning');
   }

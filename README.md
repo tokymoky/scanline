@@ -1,39 +1,57 @@
 # Scanline — Image to Text
 
-Outil simple : dépose une image, récupère le texte extrait.
-L'extraction est un vrai OCR (Tesseract.js) qui tourne entièrement
-dans le navigateur — aucune API, aucune clé, aucun serveur.
+Deux modes d'extraction :
+- **Standard** — Tesseract.js, tourne dans le navigateur, gratuit, illimité,
+  aucune clé. Bon pour du texte imprimé net.
+- **Avancée** — Google Gemini (vision), meilleure sur l'écriture manuscrite
+  et les mises en page complexes. Gratuite dans les limites du free tier,
+  mais nécessite une clé API et un backend pour la garder secrète.
 
 ## Structure
 
 ```
 scanline/
-└── index.html   ← tout est ici (page + logique OCR)
+├── index.html              ← page + logique Tesseract (mode standard)
+├── api/
+│   └── extract-advanced.js ← fonction serverless, appelle Gemini (mode avancé)
+└── README.md
 ```
 
-## Déploiement (GitHub Pages — gratuit, sans backend)
+## Déploiement
 
-### 1. Créer le repo GitHub
-```bash
-cd scanline
-git init
-git add .
-git commit -m "Premier jet: image to text (OCR local)"
-git remote add origin https://github.com/<ton-compte>/scanline.git
-git push -u origin main
-```
+Comme le mode avancé a besoin d'un backend, on repasse par GitHub + Vercel
+(GitHub Pages seul ne suffit plus, contrairement à la version 100% Tesseract).
 
-### 2. Activer GitHub Pages
-- Sur GitHub : Settings → Pages
-- Source : "Deploy from a branch" → branche `main` → dossier `/ (root)`
-- Sauvegarde. GitHub te donne une URL du type
-  `https://<ton-compte>.github.io/scanline/`
+### 1. Obtenir une clé API Gemini (gratuite)
+- Va sur https://aistudio.google.com
+- Connecte-toi avec un compte Google
+- "Get API key" → crée une clé
+- **Vérifie le nom du modèle actuel** dans la doc à ce moment-là — le fichier
+  utilise `gemini-1.5-flash`, mais Google change ces noms de temps en temps ;
+  si l'extraction avancée renvoie une erreur, c'est la première chose à checker.
 
-C'est tout — pas de Vercel, pas de clé API, pas de coût par utilisation.
+### 2. Pousser sur GitHub
+Upload direct sur github.com (comme avant) : dézippe et dépose tous les
+fichiers, dossier `api/` inclus.
+
+### 3. Importer sur Vercel
+- vercel.com → "Add New Project" → sélectionne le repo
+- Vercel détecte automatiquement `api/extract-advanced.js` comme fonction serverless
+
+### 4. Ajouter la clé en variable d'environnement
+- Settings → Environment Variables → `GEMINI_API_KEY` = ta clé
+- Redéploie pour appliquer
+
+### 5. Tester
+- Le bouton "Extraire le texte" (standard) fonctionne partout, y compris sur
+  GitHub Pages seul, sans backend.
+- Le bouton "Extraction avancée" ne fonctionne que sur le déploiement Vercel
+  (celui qui a la clé configurée).
 
 ## Notes
-- La précision dépend de la qualité de l'image (texte net, bien cadré = meilleurs résultats).
-- Tesseract.js est configuré en français + anglais (`fra+eng`) — ajoute d'autres
-  langues si besoin (liste des codes : https://tesseract.projectnaptha.com/langs).
-- Le premier chargement télécharge le modèle de langue (quelques Mo) — normal,
-  c'est mis en cache ensuite par le navigateur.
+- Le free tier Gemini a des limites de requêtes par minute/jour — largement
+  suffisant pour tester et un usage personnel, mais ajoute une limite basique
+  (par IP) avant de partager le lien largement.
+- Si tu veux revenir à une version 100% gratuite/sans backend, retire le
+  bouton "avancée" et le dossier `api/` — Tesseract seul tourne sur GitHub
+  Pages tel quel.
