@@ -255,6 +255,28 @@
     <textarea id="resultText" readonly></textarea>
   </div>
 
+  <div style="margin-top:64px; padding-top:32px; border-top:1px solid var(--line);">
+    <div class="eyebrow">02 — Prototype</div>
+    <h1 style="font-size:28px;">Transcrire une vidéo YouTube</h1>
+    <p class="sub">Colle un lien YouTube. Fonctionne même sans sous-titres existants — l'audio est extrait puis transcrit.</p>
+
+    <div class="actions" style="margin-top:0;">
+      <input type="text" id="ytUrl" placeholder="https://www.youtube.com/watch?v=..." style="flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:8px; font-family:'Inter',sans-serif; font-size:14px;">
+      <button class="primary" id="ytBtn">Transcrire</button>
+    </div>
+    <div class="actions" style="margin-top:10px;">
+      <span class="status" id="ytStatus"></span>
+    </div>
+
+    <div class="result-block" id="ytResultBlock" style="margin-top:24px;">
+      <div class="result-head">
+        <span id="ytResultTitle">Transcription</span>
+        <button class="copy-btn" id="ytCopyBtn">Copier</button>
+      </div>
+      <textarea id="ytResultText" readonly></textarea>
+    </div>
+  </div>
+
   <footer>Étape 1–2 · prototype fonctionnel, sans design final</footer>
 </div>
 
@@ -392,6 +414,60 @@ copyBtn.addEventListener('click', () => {
   document.execCommand('copy');
   copyBtn.textContent = 'Copié ✓';
   setTimeout(() => copyBtn.textContent = 'Copier', 1500);
+});
+
+// ── YouTube transcript tool ──────────────────────────────────────
+// IMPORTANT: replace this with your real Render backend URL once deployed.
+const YT_BACKEND_URL = 'https://YOUR-RENDER-APP.onrender.com/transcribe';
+
+const ytUrlInput = document.getElementById('ytUrl');
+const ytBtn = document.getElementById('ytBtn');
+const ytStatus = document.getElementById('ytStatus');
+const ytResultBlock = document.getElementById('ytResultBlock');
+const ytResultText = document.getElementById('ytResultText');
+const ytResultTitle = document.getElementById('ytResultTitle');
+const ytCopyBtn = document.getElementById('ytCopyBtn');
+
+ytBtn.addEventListener('click', async () => {
+  const url = ytUrlInput.value.trim();
+  if (!url) return;
+
+  ytBtn.disabled = true;
+  ytStatus.textContent = 'Téléchargement et transcription en cours… (peut prendre 1-2 min)';
+  ytStatus.className = 'status';
+  ytResultBlock.classList.remove('active');
+
+  try{
+    const response = await fetch(YT_BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+
+    const resData = await response.json().catch(() => ({}));
+
+    if (!response.ok){
+      throw new Error(resData.error || ('Requête échouée (' + response.status + ')'));
+    }
+
+    ytResultText.value = resData.text || 'Aucun texte détecté.';
+    ytResultTitle.textContent = resData.title ? ('Transcription — ' + resData.title) : 'Transcription';
+    ytResultBlock.classList.add('active');
+    ytStatus.textContent = 'Terminé';
+    ytStatus.className = 'status done';
+  }catch(err){
+    ytStatus.textContent = 'Erreur : ' + err.message;
+    ytStatus.className = 'status error';
+  }finally{
+    ytBtn.disabled = false;
+  }
+});
+
+ytCopyBtn.addEventListener('click', () => {
+  ytResultText.select();
+  document.execCommand('copy');
+  ytCopyBtn.textContent = 'Copié ✓';
+  setTimeout(() => ytCopyBtn.textContent = 'Copier', 1500);
 });
 </script>
 </body>

@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     return res.status(413).json({ error: 'Image trop volumineuse' });
   }
 
-  const MODEL = 'gemini-flash-latest'; // check aistudio.google.com if this errorsn
+  const MODEL = 'gemini-flash-latest'; // alias — always points to the current flash model
 
   try {
     const geminiRes = await fetch(
