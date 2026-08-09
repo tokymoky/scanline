@@ -426,7 +426,9 @@ copyBtn.addEventListener('click', () => {
 
 // ── YouTube transcript tool ──────────────────────────────────────
 // Your PC's Cloudflare tunnel URL, ending in /process (not /transcribe anymore).
-const YT_BACKEND_URL = 'https://concert-omaha-scientific-gage.trycloudflare.com/process';
+const YT_BACKEND_URL = 'https://asia-demographic-separate-cincinnati.trycloudflare.com/process';
+// Must match BACKEND_SECRET in local_app.py exactly.
+const YT_BACKEND_SECRET = 'change-this-to-a-random-string';
 
 const ytUrlInput = document.getElementById('ytUrl');
 const ytBtn = document.getElementById('ytBtn');
@@ -452,7 +454,10 @@ ytBtn.addEventListener('click', async () => {
   try{
     const response = await fetch(YT_BACKEND_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Backend-Secret': YT_BACKEND_SECRET
+      },
       body: JSON.stringify({ url })
     });
 
