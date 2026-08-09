@@ -268,9 +268,17 @@
       <span class="status" id="ytStatus"></span>
     </div>
 
-    <div class="result-block" id="ytResultBlock" style="margin-top:24px;">
+    <div class="result-block" id="ytSummaryBlock" style="margin-top:24px;">
       <div class="result-head">
-        <span id="ytResultTitle">Transcription</span>
+        <span id="ytSummaryTitle">Résumé</span>
+        <button class="copy-btn" id="ytSummaryCopyBtn">Copier</button>
+      </div>
+      <textarea id="ytSummaryText" readonly style="min-height:120px;"></textarea>
+    </div>
+
+    <div class="result-block" id="ytResultBlock" style="margin-top:16px;">
+      <div class="result-head">
+        <span>Transcription complète (avec horodatage)</span>
         <button class="copy-btn" id="ytCopyBtn">Copier</button>
       </div>
       <textarea id="ytResultText" readonly></textarea>
@@ -417,15 +425,18 @@ copyBtn.addEventListener('click', () => {
 });
 
 // ── YouTube transcript tool ──────────────────────────────────────
-// IMPORTANT: replace this with your real Render backend URL once deployed.
-const YT_BACKEND_URL = 'https://asia-demographic-separate-cincinnati.trycloudflare.com/transcribe';
+// Your PC's Cloudflare tunnel URL, ending in /process (not /transcribe anymore).
+const YT_BACKEND_URL = 'https://asia-demographic-separate-cincinnati.trycloudflare.com/process';
 
 const ytUrlInput = document.getElementById('ytUrl');
 const ytBtn = document.getElementById('ytBtn');
 const ytStatus = document.getElementById('ytStatus');
+const ytSummaryBlock = document.getElementById('ytSummaryBlock');
+const ytSummaryText = document.getElementById('ytSummaryText');
+const ytSummaryTitle = document.getElementById('ytSummaryTitle');
+const ytSummaryCopyBtn = document.getElementById('ytSummaryCopyBtn');
 const ytResultBlock = document.getElementById('ytResultBlock');
 const ytResultText = document.getElementById('ytResultText');
-const ytResultTitle = document.getElementById('ytResultTitle');
 const ytCopyBtn = document.getElementById('ytCopyBtn');
 
 ytBtn.addEventListener('click', async () => {
@@ -433,8 +444,9 @@ ytBtn.addEventListener('click', async () => {
   if (!url) return;
 
   ytBtn.disabled = true;
-  ytStatus.textContent = 'Téléchargement et transcription en cours… (peut prendre 1-2 min)';
+  ytStatus.textContent = 'Téléchargement, transcription locale et résumé en cours… (peut prendre plusieurs minutes)';
   ytStatus.className = 'status';
+  ytSummaryBlock.classList.remove('active');
   ytResultBlock.classList.remove('active');
 
   try{
@@ -450,9 +462,13 @@ ytBtn.addEventListener('click', async () => {
       throw new Error(resData.error || ('Requête échouée (' + response.status + ')'));
     }
 
-    ytResultText.value = resData.text || 'Aucun texte détecté.';
-    ytResultTitle.textContent = resData.title ? ('Transcription — ' + resData.title) : 'Transcription';
+    ytSummaryText.value = resData.summary || 'Résumé indisponible.';
+    ytSummaryTitle.textContent = resData.title ? ('Résumé — ' + resData.title) : 'Résumé';
+    ytSummaryBlock.classList.add('active');
+
+    ytResultText.value = resData.transcript || 'Aucun texte détecté.';
     ytResultBlock.classList.add('active');
+
     ytStatus.textContent = 'Terminé';
     ytStatus.className = 'status done';
   }catch(err){
@@ -461,6 +477,13 @@ ytBtn.addEventListener('click', async () => {
   }finally{
     ytBtn.disabled = false;
   }
+});
+
+ytSummaryCopyBtn.addEventListener('click', () => {
+  ytSummaryText.select();
+  document.execCommand('copy');
+  ytSummaryCopyBtn.textContent = 'Copié ✓';
+  setTimeout(() => ytSummaryCopyBtn.textContent = 'Copier', 1500);
 });
 
 ytCopyBtn.addEventListener('click', () => {
